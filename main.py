@@ -15,6 +15,22 @@ logger = logging.getLogger(__name__)
 
 ### COMMANDS ###
 
+def checkAuth(bot, update, user_data):
+    if(user_data["access_token"] == ""):
+        bot.send_message(chat_id=update.message.chat_id, text=bot_messages.authorisation_response)
+        return bot_states.PASSWORD
+    return True
+
+def authorise(bot, update):
+    response_json = api_calls.authorise()
+    if response_json.status == 200:
+        user_data["access_token"] = "Bearer"
+        bot.send_message(chat_id=update.message.chat_id, text="success")
+        return True
+    else:
+        bot.send_message(chat_id=update.message.chat_id, text=bot_messages.authorisation_response)
+        return bot_states.PASSWORD
+
 def start(bot, update):
     bot.send_message(chat_id=update.message.chat_id, text=bot_messages.start_response)
 
@@ -325,6 +341,14 @@ def main():
     feedback_command_handler = CommandHandler('feedback', feedback_command)
     unknown_command_handler = MessageHandler(Filters.command, unknown_command)
 
+
+    auth_handler = ConversationHandler(
+        entry_points=[CommandHandler('password', checkAuth)],
+        states={
+            bot_states.PASSWORD: [MessageHandler(Filters.text, authorise, pass_user_data=True)]
+        },
+        fallbacks=[RegexHandler('[/]*', cancel)]
+    )
 
     search_handler = ConversationHandler(
         entry_points=[CommandHandler('search', search)],

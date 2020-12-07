@@ -28,3 +28,5 @@ set_my_group_server_error_response = "Server internal error, please try again la
 set_my_group_failure_response = "Sorry, you haven't typed exact group.\nTry again."
 
 cancel_response = "Command is canceled."
+
+authorisation_response = "To access bot functionality, write your individual secret password."

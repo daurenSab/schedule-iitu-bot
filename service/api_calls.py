@@ -12,6 +12,19 @@ logging.basicConfig(level=logging.INFO,
 logger = logging.getLogger("api_calls")
 
 
+def authorise(chat_id, password):
+    status = 400
+    try:
+        user_obj = {'id': chat_id, 'password': password}
+        headers = {'Content-Type': 'application/json'}
+        response = requests.post(sensitive.AUTHORISE_URL, data=json.dumps(user_obj), headers=headers)
+        response_json = response.json()
+        status = response_json['status']
+        return response_json
+    except Exception as e:
+        logger.error('Cannot update groupId, error: %s', e)
+    return status
+
 def get_courses():
     courses = [
         [InlineKeyboardButton('1 course', callback_data='course1')],

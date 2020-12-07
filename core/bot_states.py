@@ -1,1 +1,1 @@
-(SEARCH, SET_GROUP) = range(2)
+(SEARCH, SET_GROUP, PASSWORD) = range(3)
