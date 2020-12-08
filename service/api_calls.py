@@ -15,15 +15,12 @@ logger = logging.getLogger("api_calls")
 def authorise(chat_id, password):
     status = 400
     try:
-        user_obj = {'id': chat_id, 'password': password}
+        user_obj = {'accountId': chat_id, 'password': password}
         headers = {'Content-Type': 'application/json'}
         response = requests.post(sensitive.AUTHORISE_URL, data=json.dumps(user_obj), headers=headers)
-        response_json = response.json()
-        status = response_json['status']
-        return response_json
+        return response
     except Exception as e:
         logger.error('Cannot update groupId, error: %s', e)
-    return status
 
 def get_courses():
     courses = [
@@ -152,21 +149,28 @@ def get_groups(course_id, specialty_id):
     return groups_name
 
 
-def get_user_group_id(chat_id):
+def get_user_group_id(chat_id, token):
     group_id = -1
     try:
-        group_id_raw = requests.get('{}?id={}'.format(sensitive.USERS_GROUP_ID_URL, chat_id))
+        headers = {
+            'Content-Type': 'application/json',
+            'Authorization': token
+        }
+        group_id_raw = requests.get('{}?id={}'.format(sensitive.USERS_GROUP_ID_URL, chat_id), headers=headers)
         group_id = group_id_raw.json()['groupId']
     except Exception as e:
         logger.warning('This user doesn\'t add group_id, error: %s', e)
     return group_id
 
 
-def set_user_group_id(chat_id, group_id):
+def set_user_group_id(chat_id, group_id, token):
     status = 400
     try:
         user_obj = {'id': chat_id, 'groupId': int(group_id)}
-        headers = {'Content-Type': 'application/json'}
+        headers = {
+            'Content-Type': 'application/json',
+            'Authorization': token
+        }
         response = requests.post(sensitive.USERS_GROUP_ID_URL, data=json.dumps(user_obj), headers=headers)
         response_json = response.json()
         status = response_json['status']
@@ -175,11 +179,15 @@ def set_user_group_id(chat_id, group_id):
     return status
 
 
-def get_free_room(day_id):
+def get_free_room(day_id, token):
     message = ''
 
     try:
-        room_data_raw = requests.get('{}?day={}'.format(sensitive.GET_FREE_ROOM_URL, day_id))
+        headers = {
+            'Content-Type': 'application/json',
+            'Authorization': token
+        }
+        room_data_raw = requests.get('{}?day={}'.format(sensitive.GET_FREE_ROOM_URL, day_id), headers=headers)
         room_data = room_data_raw.json()
 
         timetable = room_data['timetable']

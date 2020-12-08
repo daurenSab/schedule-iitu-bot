@@ -1,6 +1,9 @@
 start_response = "Hello, I'm Schedule IITU Bot\n\n" \
                  "Type /help and get a list of available commands."
 
+auth_start_response = "Hello, I'm Schedule IITU Bot\n\n" \
+                      "Authorise to the bot using the /authorise command"       
+
 help_response = "Available commands:\n\n" \
                 "1. /show_group_schedule\n"  \
                 "2. /show_teacher_schedule\n" \
@@ -29,4 +32,6 @@ set_my_group_failure_response = "Sorry, you haven't typed exact group.\nTry agai
 
 cancel_response = "Command is canceled."
 
-authorisation_response = "To access bot functionality, write your individual secret password."
+authorisation_response = "To access bot functionality, write your individual secret password. Press /authorise"
+
+password_response = "Enter your password: "

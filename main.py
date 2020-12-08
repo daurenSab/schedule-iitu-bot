@@ -15,71 +15,109 @@ logger = logging.getLogger(__name__)
 
 ### COMMANDS ###
 
-def checkAuth(bot, update, user_data):
-    if(user_data["access_token"] == ""):
-        bot.send_message(chat_id=update.message.chat_id, text=bot_messages.authorisation_response)
-        return bot_states.PASSWORD
-    return True
+def check_auth(user_data):
+    return 'access_token' in user_data
 
-def authorise(bot, update):
-    response_json = api_calls.authorise()
-    if response_json.status == 200:
-        user_data["access_token"] = "Bearer"
+def authorise_request(bot, update, user_data):
+    password = update.message.text
+    response = api_calls.authorise(update.message.chat_id, password)
+    logger.info("password: {}".format(password))
+    if response.status_code == 200:
+        response_json = response.json()
+        logger.info("token received {}".format(response_json["access_token"]))
+        user_data['access_token'] = "Bearer " + response_json["access_token"]
         bot.send_message(chat_id=update.message.chat_id, text="success")
-        return True
+        return ConversationHandler.END
     else:
         bot.send_message(chat_id=update.message.chat_id, text=bot_messages.authorisation_response)
         return bot_states.PASSWORD
 
-def start(bot, update):
-    bot.send_message(chat_id=update.message.chat_id, text=bot_messages.start_response)
+def start(bot, update, user_data):
+    logger.info("UserId: {}".format(update.message.chat_id))
+    if check_auth(user_data) == False:
+        bot.send_message(chat_id=update.message.chat_id, text=bot_messages.auth_start_response)
+    else:
+        bot.send_message(chat_id=update.message.chat_id, text=bot_messages.start_response)
 
-def get_group_schedule(bot, update):
-    reply_markup = InlineKeyboardMarkup(api_calls.get_courses())
-    bot.send_message(chat_id=update.message.chat_id, text='Select the course:', reply_markup=reply_markup)
+def get_group_schedule(bot, update, user_data):
+    if check_auth(user_data) == False:
+        bot.send_message(chat_id=update.message.chat_id, text=bot_messages.authorisation_response)
+    else:
+        reply_markup = InlineKeyboardMarkup(api_calls.get_courses())
+        bot.send_message(chat_id=update.message.chat_id, text='Select the course:', reply_markup=reply_markup)
 
-def get_teacher_schedule(bot, update):
-    reply_markup = InlineKeyboardMarkup(api_calls.get_departments())
-    bot.send_message(chat_id=update.message.chat_id, text='Select the department:', reply_markup=reply_markup)
+def get_teacher_schedule(bot, update, user_data):
+    if check_auth(user_data) == False:
+        bot.send_message(chat_id=update.message.chat_id, text=bot_messages.authorisation_response)
+    else:
+        reply_markup = InlineKeyboardMarkup(api_calls.get_departments())
+        bot.send_message(chat_id=update.message.chat_id, text='Select the department:', reply_markup=reply_markup)
 
-def get_free_rooms(bot, update):
-    reply_markup = InlineKeyboardMarkup(api_calls.get_free_room_days())
-    bot.send_message(chat_id=update.message.chat_id, text='Select the day:', reply_markup=reply_markup)
+def get_free_rooms(bot, update, user_data):
+    if check_auth(user_data) == False:
+        bot.send_message(chat_id=update.message.chat_id, text=bot_messages.authorisation_response)
+    else:
+        reply_markup = InlineKeyboardMarkup(api_calls.get_free_room_days())
+        bot.send_message(chat_id=update.message.chat_id, text='Select the day:', reply_markup=reply_markup)
 
 def get_my_group_schedule(bot, update, user_data):
-    group_id = api_calls.get_user_group_id(update.message.chat_id)
-    if group_id == -1:
-        bot.send_message(chat_id=update.message.chat_id, text=bot_messages.get_my_group_schedule_failure_response)
+    if check_auth(user_data) == False:
+        bot.send_message(chat_id=update.message.chat_id, text=bot_messages.authorisation_response)
     else:
-        user_data['block_id'] = str(group_id)
-        user_data['requested_type'] = 'group'
-        user_data['is_search'] = ''
-        text = 'Select the day:'
-        reply_markup = InlineKeyboardMarkup(api_calls.get_days(str(group_id), 'group'))
-        bot.send_message(chat_id=update.message.chat_id,
-                         text=text,
-                         reply_markup=reply_markup,
-                         parse_mode=telegram.ParseMode.HTML)
+        group_id = api_calls.get_user_group_id(update.message.chat_id, user_data['access_token'])
+        if group_id == -1:
+            bot.send_message(chat_id=update.message.chat_id, text=bot_messages.get_my_group_schedule_failure_response)
+        else:
+            user_data['block_id'] = str(group_id)
+            user_data['requested_type'] = 'group'
+            user_data['is_search'] = ''
+            text = 'Select the day:'
+            reply_markup = InlineKeyboardMarkup(api_calls.get_days(str(group_id), 'group'))
+            bot.send_message(chat_id=update.message.chat_id,
+                            text=text,
+                            reply_markup=reply_markup,
+                            parse_mode=telegram.ParseMode.HTML)
 
-def set_my_group(bot, update):
-    update.message.reply_text(bot_messages.set_my_group_response)
-    return bot_states.SET_GROUP
+def authorise(bot, update):
+    update.message.reply_text(bot_messages.password_response)
+    return bot_states.PASSWORD
 
-def search(bot, update):
-    update.message.reply_text(bot_messages.search_response)
-    return bot_states.SEARCH
+def set_my_group(bot, update, user_data):
+    if check_auth(user_data) == False:
+        update.message.reply_text(bot_messages.authorisation_response)
+        return ConversationHandler.END
+    else:
+        update.message.reply_text(bot_messages.set_my_group_response)
+        return bot_states.SET_GROUP
 
-def help(bot, update):
-    bot.send_message(chat_id=update.message.chat_id, text=bot_messages.help_response)
+def search(bot, update, user_data):
+    if check_auth(user_data) == False:
+        update.message.reply_text(bot_messages.authorisation_response)
+        return ConversationHandler.END
+    else:
+        update.message.reply_text(bot_messages.search_response)
+        return bot_states.SEARCH
 
-def unknown_command(bot, update):
-    bot.send_message(chat_id=update.message.chat_id, text=bot_messages.unknown_response)
+def help(bot, update, user_data):
+    if check_auth(user_data) == False:
+        bot.send_message(chat_id=update.message.chat_id, text=bot_messages.authorisation_response)
+    else:
+        bot.send_message(chat_id=update.message.chat_id, text=bot_messages.help_response)
 
-def feedback_command(bot, update):
-    bot.send_message(chat_id=update.message.chat_id, text=bot_messages.feedback_response)
+def unknown_command(bot, update, user_data):
+    if check_auth(user_data) == False:
+        bot.send_message(chat_id=update.message.chat_id, text=bot_messages.authorisation_response)
+    else:
+        bot.send_message(chat_id=update.message.chat_id, text=bot_messages.unknown_response)
+
+def feedback_command(bot, update, user_data):
+    if check_auth(user_data) == False:
+        bot.send_message(chat_id=update.message.chat_id, text=bot_messages.authorisation_response)
+    else:
+        bot.send_message(chat_id=update.message.chat_id, text=bot_messages.feedback_response)
 
 #################
-def set_group_request(bot, update):
+def set_group_request(bot, update, user_data):
     search_text = update.message.text
     schedule_data_list = api_calls.get_result_of_search(search_text, True)
 
@@ -88,7 +126,7 @@ def set_group_request(bot, update):
     else:
         schedule_data = schedule_data_list[0]
         if schedule_data.type == 'group' and (schedule_data.matching >= 0.9 or (search_text in schedule_data.name and len(search_text.split('-')[1]) >= 4)):
-            response_status = api_calls.set_user_group_id(update.message.chat_id, schedule_data.id)
+            response_status = api_calls.set_user_group_id(update.message.chat_id, schedule_data.id, user_data['access_token'])
             if response_status == 200:
                 bot.send_message(chat_id=update.message.chat_id, text=bot_messages.set_my_group_success_response)
             else:
@@ -310,11 +348,11 @@ def get_search_callback_query(bot, update, user_data):
     edit_message_with_reply_markup(bot, update, text, reply_markup)
 
 
-def get_free_rooms_callback_query(bot, update):
+def get_free_rooms_callback_query(bot, update, user_data):
     msg = update.callback_query.data
     day_id = msg[8:]
 
-    text = api_calls.get_free_room(day_id)
+    text = api_calls.get_free_room(day_id, user_data['access_token'])
 
     reply_markup_raw = [[InlineKeyboardButton('<<', callback_data="rooms_menu")]]
     reply_markup = InlineKeyboardMarkup(reply_markup_raw)
@@ -330,28 +368,28 @@ def main():
     updater = Updater(sensitive.BOT_TOKEN)
     dispatcher = updater.dispatcher
 
-    ### COMMAND HANDLERS
-    start_command_handler = CommandHandler('start', start)
-    help_command_handler = CommandHandler('help', help)
-    get_group_schedule_command_handler = CommandHandler('show_group_schedule', get_group_schedule)
+    ### COMMAND HANDLERS 
+    start_command_handler = CommandHandler('start', start, pass_user_data=True)
+    # authorise_command_handler = CommandHandler('authorise', authorise, pass_user_data=True)
+    help_command_handler = CommandHandler('help', help, pass_user_data=True)
+    get_group_schedule_command_handler = CommandHandler('show_group_schedule', get_group_schedule, pass_user_data=True)
     get_my_group_schedule_command_handler = CommandHandler('my_group_schedule', get_my_group_schedule, pass_user_data=True)
 
-    get_teacher_schedule_command_handler = CommandHandler('show_teacher_schedule', get_teacher_schedule)
-    get_free_rooms_command_handler = CommandHandler('show_free_cabinets', get_free_rooms)
-    feedback_command_handler = CommandHandler('feedback', feedback_command)
-    unknown_command_handler = MessageHandler(Filters.command, unknown_command)
+    get_teacher_schedule_command_handler = CommandHandler('show_teacher_schedule', get_teacher_schedule, pass_user_data=True)
+    get_free_rooms_command_handler = CommandHandler('show_free_cabinets', get_free_rooms, pass_user_data=True)
+    feedback_command_handler = CommandHandler('feedback', feedback_command, pass_user_data=True)
+    unknown_command_handler = MessageHandler(Filters.command, unknown_command, pass_user_data=True)
 
-
-    auth_handler = ConversationHandler(
-        entry_points=[CommandHandler('password', checkAuth)],
+    authorise_handler = ConversationHandler(
+        entry_points=[CommandHandler('authorise', authorise)],
         states={
-            bot_states.PASSWORD: [MessageHandler(Filters.text, authorise, pass_user_data=True)]
+            bot_states.PASSWORD: [MessageHandler(Filters.text, authorise_request, pass_user_data=True)]
         },
         fallbacks=[RegexHandler('[/]*', cancel)]
     )
 
     search_handler = ConversationHandler(
-        entry_points=[CommandHandler('search', search)],
+        entry_points=[CommandHandler('search', search, pass_user_data=True)],
         states={
             bot_states.SEARCH: [MessageHandler(Filters.text, search_request, pass_user_data=True)]
         },
@@ -359,9 +397,9 @@ def main():
     )
 
     set_my_group_handler = ConversationHandler(
-        entry_points=[CommandHandler('set_my_group', set_my_group)],
+        entry_points=[CommandHandler('set_my_group', set_my_group, pass_user_data=True)],
         states={
-            bot_states.SET_GROUP: [MessageHandler(Filters.text, set_group_request)]
+            bot_states.SET_GROUP: [MessageHandler(Filters.text, set_group_request, pass_user_data=True)]
         },
         fallbacks=[RegexHandler('[/]*', cancel)]
     )
@@ -371,6 +409,7 @@ def main():
                                                         pattern='^courses_menu')
 
     get_free_room_callback_handler = CallbackQueryHandler(get_free_room_callback_query,
+                                                          pass_user_data=True,
                                                           pattern='^rooms_menu')
 
     get_departments_callback_handler = CallbackQueryHandler(get_departments_callback_query,
@@ -408,9 +447,11 @@ def main():
                                                        pattern='^search')
 
     get_free_rooms_callback_handler = CallbackQueryHandler(get_free_rooms_callback_query,
+                                                           pass_user_data=True,
                                                            pattern='^freeroom')
 
     bot_handlers = [
+        authorise_handler,
         start_command_handler,
         help_command_handler,
         feedback_command_handler,
