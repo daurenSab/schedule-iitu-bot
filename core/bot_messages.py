@@ -35,3 +35,5 @@ cancel_response = "Command is canceled."
 authorisation_response = "To access bot functionality, write your individual secret password. Press /authorise"
 
 password_response = "Enter your password: "
+
+error_password_response = "Try again, enter your password: "

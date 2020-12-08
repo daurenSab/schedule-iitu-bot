@@ -29,7 +29,7 @@ def authorise_request(bot, update, user_data):
         bot.send_message(chat_id=update.message.chat_id, text="success")
         return ConversationHandler.END
     else:
-        bot.send_message(chat_id=update.message.chat_id, text=bot_messages.authorisation_response)
+        bot.send_message(chat_id=update.message.chat_id, text=bot_messages.error_password_response)
         return bot_states.PASSWORD
 
 def start(bot, update, user_data):
