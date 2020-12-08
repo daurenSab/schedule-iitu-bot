@@ -21,14 +21,15 @@ def check_auth(user_data):
 def authorise_request(bot, update, user_data):
     password = update.message.text
     response = api_calls.authorise(update.message.chat_id, password)
-    logger.info("password: {}".format(password))
+    response_json = response.json()
     if response.status_code == 200:
-        response_json = response.json()
-        logger.info("token received {}".format(response_json["access_token"]))
         user_data['access_token'] = "Bearer " + response_json["access_token"]
-        bot.send_message(chat_id=update.message.chat_id, text="success")
+        bot.send_message(chat_id=update.message.chat_id, text=success_response)
         return ConversationHandler.END
-    else:
+    elif response.status_code == 500:
+        bot.send_message(chat_id=update.message.chat_id, text=response_json["message"])
+        return ConversationHandler.END
+    else:    
         bot.send_message(chat_id=update.message.chat_id, text=bot_messages.error_password_response)
         return bot_states.PASSWORD
 

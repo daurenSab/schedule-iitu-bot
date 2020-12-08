@@ -37,3 +37,6 @@ authorisation_response = "To access bot functionality, write your individual sec
 password_response = "Enter your password: "
 
 error_password_response = "Try again, enter your password: "
+
+success_response = "You are authorized!\n\n" \ 
+                   "Type /help and get a list of available commands."
