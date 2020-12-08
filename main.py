@@ -22,11 +22,11 @@ def authorise_request(bot, update, user_data):
     password = update.message.text
     response = api_calls.authorise(update.message.chat_id, password)
     response_json = response.json()
-    if response.status_code == 200:
+    if response.status_code == 200 and response_json["status"] == 200:
         user_data['access_token'] = "Bearer " + response_json["access_token"]
         bot.send_message(chat_id=update.message.chat_id, text=success_response)
         return ConversationHandler.END
-    elif response.status_code == 500:
+    elif response.status_code == 500 or response_json["status"] == 500:
         bot.send_message(chat_id=update.message.chat_id, text=response_json["message"])
         return ConversationHandler.END
     else:    
