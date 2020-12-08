@@ -38,5 +38,4 @@ password_response = "Enter your password: "
 
 error_password_response = "Try again, enter your password: "
 
-success_response = "You are authorized!\n\n" \ 
-                   "Type /help and get a list of available commands."
+success_response = "You are authorized!\n\nType /help and get a list of available commands." 
